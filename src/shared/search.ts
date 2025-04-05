@@ -1,4 +1,4 @@
-import * as functions from 'firebase-functions';
+// import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
 import { CollectionReference, DocumentSnapshot, QuerySnapshot } from 'firebase-admin/firestore';
 import { eventExists } from './events';
@@ -16,11 +16,12 @@ import {
 } from './tools';
 import { DocumentRecord } from './types';
 import { htmlToText } from 'html-to-text';
+import { Change, EventContext } from 'firebase-functions/lib/v1/cloud-functions';
 
 // DEFAULTS
 const DELIM = '__';
 const _SEARCH = '_search';
-const _MERGED = '_merged';
+const _MERGED = '_all';
 const _TERM = '_term';
 const _TRIGRAMS = '_trigrams';
 /**
@@ -29,8 +30,11 @@ const _TRIGRAMS = '_trigrams';
  * @param path full path to collection or document
  * @returns a string with just the collection name (no '/')
  */
-function extractCollectionNameFromPath({ resource: { name } }: functions.EventContext, path = '') {
-  return name.slice(name.indexOf(path) + path.length).split('/')[1]; // path starts with / so [0] is empty string
+function extractCollectionNameFromPath({ resource: { name } }: EventContext, path = '') {
+  console.log('Extracting collection name from path: ', name);
+  // return name.slice(name.indexOf(path) + path.length).split('/')[1]; // path starts with / so [0] is empty string
+  const pathParts = name.split('/documents/')[1].split('/');
+  return pathParts[0];
 }
 
 // TYPES
@@ -56,6 +60,7 @@ type RelevantIndexOptions = {
   mergedCollectionName?: string;
   termField?: string;
   filterFunc?: (value: string) => string;
+  customKeywords?: string[]; // Updated type
 };
 
 type SearchResult = { id: string; relevance: number };
@@ -97,8 +102,8 @@ const db = admin.firestore();
  * @param searchCollectionName - name of search collection
  */
 export async function fullTextIndex(
-  change: functions.Change<DocumentSnapshot<DocumentRecord<string, string>>>,
-  context: functions.EventContext,
+  change: Change<DocumentSnapshot<DocumentRecord<string, string>>>,
+  context: EventContext,
   fieldToIndex: string,
   foreignKey = 'id',
   type = 'id',
@@ -323,7 +328,6 @@ export async function relevantSearch({
         r.relevance = value;
       }
       return r;
-      return r;
       // sort by relevance again
     })
     .sort((a, b) => (b.relevance < a.relevance ? -1 : a.relevance ? 1 : 0))
@@ -435,7 +439,7 @@ export async function trigramSearch({
     .sort((a, b) => (b.relevance < a.relevance ? -1 : a.relevance ? 1 : 0))
     .filter((r) => {
       // limit limit
-      if (i < limit ?? Number.MAX_SAFE_INTEGER) {
+      if (i < limit) {
         ++i;
         return r;
       }
@@ -569,12 +573,13 @@ export async function initRelevantIndex(
  *   mergedCollectionName - name of combined fields collection, default _all
  *   termField - name of terms array, default _term
  *   filterFunc - function to filter, can pass a soundex function
+ *   customKeywords - array of custom keywords to include in the index
  * }
  * @param contextParamsKey - default is docId, but should match cloud function
  */
 export async function relevantIndex(
-  change: functions.Change<DocumentSnapshot<DocumentRecord<string, string>>>,
-  context: functions.EventContext,
+  change: Change<DocumentSnapshot<DocumentRecord<string, string>>>,
+  context: EventContext,
   {
     fieldsToIndex,
     rootCollectionPath = '',
@@ -584,7 +589,8 @@ export async function relevantIndex(
     mergedCollectionName = _MERGED,
     termField = _TERM,
     filterFunc,
-  }: RelevantIndexOptions,
+    customKeywords = [], // New option for custom keywords
+  }: RelevantIndexOptions & { customKeywords?: string[] }, // Updated type
   contextParamsKey = 'docId',
 ) {
   // don't run if repeated function
@@ -603,7 +609,7 @@ export async function relevantIndex(
   }
 
   if (typeof docId !== 'string' || docId.length < 1) {
-    throw new Error('Missing doc Id');
+    throw new Error('Missing doc Id');  
   }
 
   const collectionToIndexDocument = db.doc(`${rootCollectionPath}/${searchCollectionName}/${collectionToIndex}`);
@@ -624,6 +630,17 @@ export async function relevantIndex(
   if (writeDoc(change)) {
     const data = {} as DocumentRecord<string, string | DocumentRecord<string, number>>;
     let m = {} as DocumentRecord<string, number>;
+
+    // Add custom keywords to the index
+    for (const keyword of customKeywords) {
+      if (keyword) {
+        let v = '';
+        for (let i = 0; i < keyword.length; i++) {
+          v = keyword.slice(0, i + 1);
+          m[v] = m[v] ?? 0 + 1; // Increment relevance for custom keywords
+        }
+      }
+    }
 
     // go through each field to index
     for (const field of fieldsToIndex) {
@@ -714,8 +731,8 @@ export async function relevantIndex(
  * }
  */
 export async function trigramIndex(
-  change: functions.Change<DocumentSnapshot<DocumentRecord<string, string>>>,
-  context: functions.EventContext,
+  change: Change<DocumentSnapshot<DocumentRecord<string, string>>>,
+  context: EventContext,
   {
     rootCollectionPath = '',
     trigramCollectionName = _TRIGRAMS,

@@ -1,10 +1,10 @@
-import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
 import { DocumentSnapshot } from 'firebase-admin/firestore';
 import { findSingleValues, updateDoc, getValue, getBefore, getAfter, getCollection } from './tools';
 import { DocumentRecord } from './types';
 import { aggregateData } from './joins';
 import { queryCounter } from './counters';
+import { Change, EventContext } from 'firebase-functions/lib/v1/cloud-functions';
 
 try {
   admin.initializeApp();
@@ -24,8 +24,8 @@ const db = admin.firestore();
  * @param maxNumTags - the maximum number of tags to put in a doc, default is 100
  */
 export async function tagIndex(
-  change: functions.Change<DocumentSnapshot<DocumentRecord<string, string[]>>>,
-  context: functions.EventContext,
+  change: Change<DocumentSnapshot<DocumentRecord<string, string[]>>>,
+  context: EventContext,
   field = 'tags',
   tagCol = '_tags',
   createAllTags = true,

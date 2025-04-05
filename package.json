@@ -1,11 +1,12 @@
 {
-  "name": "@tusk-legacy/adv-firestore-functions",
-  "version": "2.0.13",
+  "name": "@vhanded/adv-firestore-functions",
+  "version": "2.0.15",
   "description": "Advanced Firestore Functions tools and indexing",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
   "publishConfig": {
-    "registry": "https://npm.pkg.github.com/Tusk-Legacy"
+    "registry": "https://registry.npmjs.org/",
+    "access": "public"
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
@@ -13,14 +14,14 @@
     "format": "prettier --write \"src/**/*.ts\"",
     "lint": "eslint .",
     "off": "tsc src/shared/offsets.ts && node src/shared/offsets.js",
-    "prepublish": "yarn build"
+    "prepublish": "npm run build"
   },
   "files": [
     "lib/**/*"
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Tusk-Legacy/adv-firestore-functions.git"
+    "url": "git+https://github.com/vhanded/adv-firestore-functions.git"
   },
   "keywords": [
     "firestore",
@@ -30,12 +31,12 @@
     "firestore",
     "search"
   ],
-  "author": "Jonathan Gamble",
+  "author": "vhanded",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/jdgamble555/adv-firestore-functions/issues"
+    "url": "https://github.com/vhanded/adv-firestore-functions/issues"
   },
-  "homepage": "https://github.com/jdgamble555/adv-firestore-functions#readme",
+  "homepage": "https://github.com/vhanded/adv-firestore-functions#readme",
   "devDependencies": {
     "@types/html-to-text": "^8.1.0",
     "@typescript-eslint/eslint-plugin": "^5.16.0",
@@ -47,8 +48,8 @@
   },
   "dependencies": {
     "eslint-plugin-prettier": "^4.0.0",
-    "firebase-admin": "^10.0.2",
-    "firebase-functions": "^3.11.0",
+    "firebase-admin": "13.2.0",
+    "firebase-functions": "6.3.2",
     "html-to-text": "^8.1.0"
   }
 }

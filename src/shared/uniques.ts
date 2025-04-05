@@ -1,8 +1,9 @@
-import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
 import { getBefore, createDoc, updateDoc, deleteDoc, getFriendlyURL } from './tools';
 import { DocumentSnapshot } from 'firebase-admin/firestore';
 import { DocumentRecord } from './types';
+import { Change } from 'firebase-functions/core';
+import { EventContext } from 'firebase-functions/lib/v1/cloud-functions';
 try {
   admin.initializeApp();
 } catch (e) {
@@ -90,8 +91,8 @@ export async function updateField<T extends DocumentRecord<string, unknown>>(
  * @param uniqueCol - name of unique collection
  */
 export async function uniqueField<T extends DocumentRecord<string, string>>(
-  change: functions.Change<DocumentSnapshot<T>>,
-  context: functions.EventContext,
+  change: Change<DocumentSnapshot<T>>,
+  context: EventContext,
   field: keyof T,
   friendly = false,
   newField: keyof T = '',

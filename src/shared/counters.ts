@@ -1,9 +1,10 @@
-import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
 import { DocumentRecord } from './types';
 import { DocumentSnapshot } from 'firebase-admin/firestore';
 import { eventExists } from './events';
 import { getAfter, getBefore, valueChange } from './tools';
+import { Change } from 'firebase-functions/core';
+import { EventContext } from 'firebase-functions/lib/v1/cloud-functions';
 try {
   admin.initializeApp();
 } catch (e) {
@@ -17,8 +18,8 @@ const db = admin.firestore();
  * @param context - event context
  */
 export async function colCounter(
-  change: functions.Change<DocumentSnapshot>,
-  context: functions.EventContext,
+  change: Change<DocumentSnapshot>,
+  context: EventContext,
   countersCol = '_counters',
 ) {
   // don't run if repeated function
@@ -84,8 +85,8 @@ export async function colCounter(
  * @param check - whether or not to check for create or delete doc
  */
 export async function queryCounter<T extends DocumentRecord<string, unknown>>(
-  change: functions.Change<DocumentSnapshot<T>>,
-  context: functions.EventContext,
+  change: Change<DocumentSnapshot<T>>,
+  context: EventContext,
   queryRef: FirebaseFirestore.Query<T>,
   countRef: FirebaseFirestore.DocumentReference<T>,
   countName = '',
@@ -179,8 +180,8 @@ function evalBooleanExpression(
  * @returns
  */
 export async function conditionCounter(
-  change: functions.Change<DocumentSnapshot<DocumentRecord<string, string>>>,
-  context: functions.EventContext,
+  change: Change<DocumentSnapshot<DocumentRecord<string, string>>>,
+  context: EventContext,
   field: string | FirebaseFirestore.FieldPath,
   operator: Omit<FirebaseFirestore.WhereFilterOp, 'array-contains' | 'in' | 'not-in' | 'array-contains-any'>,
   value: string,

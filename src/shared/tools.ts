@@ -1,7 +1,8 @@
-import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
 import { Timestamp, FieldValue, DocumentData, DocumentSnapshot } from 'firebase-admin/firestore';
 import { DocumentRecord } from './types';
+import { Change } from 'firebase-functions/core';
+import { EventContext } from 'firebase-functions/lib/v1/cloud-functions';
 
 type GetTriggerData = {
   createdAt?: Timestamp;
@@ -22,24 +23,24 @@ try {
  * The check functions for type of change
  * @param change
  */
-export function updateDoc(change: functions.Change<DocumentSnapshot>) {
+export function updateDoc(change: Change<DocumentSnapshot>) {
   return change.before.exists && change.after.exists;
 }
-export function createDoc(change: functions.Change<DocumentSnapshot>) {
+export function createDoc(change: Change<DocumentSnapshot>) {
   return change.after.exists && !change.before.exists;
 }
-export function deleteDoc(change: functions.Change<DocumentSnapshot>) {
+export function deleteDoc(change: Change<DocumentSnapshot>) {
   return change.before.exists && !change.after.exists;
 }
-export function writeDoc(change: functions.Change<DocumentSnapshot>) {
+export function writeDoc(change: Change<DocumentSnapshot>) {
   // createDoc || updateDoc
   return change.after.exists;
 }
-export function shiftDoc(change: functions.Change<DocumentSnapshot>) {
+export function shiftDoc(change: Change<DocumentSnapshot>) {
   // createDoc || deleteDoc
   return !change.after.exists || !change.before.exists;
 }
-export function popDoc(change: functions.Change<DocumentSnapshot>) {
+export function popDoc(change: Change<DocumentSnapshot>) {
   // updateDoc || deleteDoc;
   return change.before.exists;
 }
@@ -86,7 +87,7 @@ export function canContinue(after: GetTriggerData, before: GetTriggerData): bool
  * @param change - change ref
  * @param context - event context
  */
-export function isTriggerFunction(change: functions.Change<DocumentSnapshot>, context: functions.EventContext) {
+export function isTriggerFunction(change: Change<DocumentSnapshot>, context: EventContext) {
   // simplify input data
   const after = change.after.exists ? change.after.data() : null;
   const before = change.before.exists ? change.before.data() : null;
@@ -107,7 +108,7 @@ export function isTriggerFunction(change: functions.Change<DocumentSnapshot>, co
  * @param updateDates - use createdAt and updatedAt
  */
 export async function triggerFunction(
-  change: functions.Change<DocumentSnapshot>,
+  change: Change<DocumentSnapshot>,
   data: SetTriggerData = {},
   updateDates = true,
 ) {
@@ -160,7 +161,7 @@ export function jsonEqual(a1: unknown, a2: unknown): boolean {
  * @param val
  */
 export function getAfter<T extends DocumentRecord<string, unknown>>(
-  change: functions.Change<DocumentSnapshot<T>>,
+  change: Change<DocumentSnapshot<T>>,
   val: keyof T,
 ) {
   // simplify input data
@@ -176,7 +177,7 @@ export function getAfter<T extends DocumentRecord<string, unknown>>(
  * @param val
  */
 export function getBefore<T extends DocumentRecord<string, unknown>>(
-  change: functions.Change<DocumentSnapshot<T>>,
+  change: Change<DocumentSnapshot<T>>,
   val: keyof T,
 ) {
   // simplify input data
@@ -192,7 +193,7 @@ export function getBefore<T extends DocumentRecord<string, unknown>>(
  * @param val
  */
 export function getValue<T extends DocumentRecord<string, unknown>>(
-  change: functions.Change<DocumentSnapshot<T>>,
+  change: Change<DocumentSnapshot<T>>,
   val: keyof T,
 ) {
   // simplify input data
@@ -211,7 +212,7 @@ export function getValue<T extends DocumentRecord<string, unknown>>(
  * @returns
  */
 export function valueBefore<T extends DocumentData>(
-  change: functions.Change<DocumentSnapshot<T>>,
+  change: Change<DocumentSnapshot<T>>,
   val: keyof T,
 ): boolean {
   const before = change.before.exists ? change.before.data() : null;
@@ -229,7 +230,7 @@ export function valueBefore<T extends DocumentData>(
  * @returns
  */
 export function valueAfter<T extends DocumentData>(
-  change: functions.Change<DocumentSnapshot<T>>,
+  change: Change<DocumentSnapshot<T>>,
   val: keyof T,
 ): boolean {
   const after = change.after.exists ? change.after.data() : null;
@@ -247,7 +248,7 @@ export function valueAfter<T extends DocumentData>(
  * @returns
  */
 export function valueCreate<T extends DocumentData>(
-  change: functions.Change<DocumentSnapshot<T>>,
+  change: Change<DocumentSnapshot<T>>,
   val: keyof T,
 ): boolean {
   if (!valueBefore(change, val) && valueAfter(change, val)) {
@@ -262,7 +263,7 @@ export function valueCreate<T extends DocumentData>(
  * @returns
  */
 export function valueDelete<T extends DocumentData>(
-  change: functions.Change<DocumentSnapshot<T>>,
+  change: Change<DocumentSnapshot<T>>,
   val: keyof T,
 ): boolean {
   if (valueBefore(change, val) && !valueAfter(change, val)) {
@@ -276,7 +277,7 @@ export function valueDelete<T extends DocumentData>(
  * @param val
  */
 export function valueChange<T extends admin.firestore.DocumentData>(
-  change: functions.Change<DocumentSnapshot<T>>,
+  change: Change<DocumentSnapshot<T>>,
   val: keyof T,
 ): boolean {
   if (valueDelete(change, val) || valueCreate(change, val)) {
@@ -291,7 +292,7 @@ export function valueChange<T extends admin.firestore.DocumentData>(
  * Returns the collection name
  * @param context
  */
-export function getCollection(context: functions.EventContext) {
+export function getCollection(context: EventContext) {
   return context.resource.name.split('/')[5];
 }
 /**
@@ -300,7 +301,7 @@ export function getCollection(context: functions.EventContext) {
  * @param arr - array of values to check
  */
 export function arrayValueChange<T extends admin.firestore.DocumentData>(
-  change: functions.Change<DocumentSnapshot<T>>,
+  change: Change<DocumentSnapshot<T>>,
   arr: (keyof T)[],
 ): boolean {
   // check each array
@@ -331,7 +332,7 @@ export function getCatArray(category: string): string[] {
  * @param change
  * @param fk
  */
-export function foreignKeyChange(change: functions.Change<DocumentSnapshot>, fk: string | string[]) {
+export function foreignKeyChange(change: Change<DocumentSnapshot>, fk: string | string[]) {
   // simplify input data
   const after = change.after.data();
   const before = change.before.data();

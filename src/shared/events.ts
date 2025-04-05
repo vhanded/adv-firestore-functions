@@ -1,6 +1,6 @@
-import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
 import { ArrayChunk } from './bulk';
+import { EventContext } from 'firebase-functions/lib/v1/cloud-functions';
 
 try {
   admin.initializeApp();
@@ -14,7 +14,7 @@ const db = admin.firestore();
  * @param eventsCol - defaults to '_events'
  * @returns - true if not first run
  */
-export async function eventExists(context: functions.EventContext, eventsCol = '_events'): Promise<boolean> {
+export async function eventExists(context: EventContext, eventsCol = '_events'): Promise<boolean> {
   // TODO: add date input
 
   const eventId = context.eventId;

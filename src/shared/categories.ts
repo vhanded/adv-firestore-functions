@@ -1,7 +1,7 @@
-import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
 import { queryCounter } from './counters';
 import { DocumentSnapshot } from 'firebase-admin/firestore';
+import { Change, EventContext } from 'firebase-functions/lib/v1/cloud-functions';
 try {
   admin.initializeApp();
 } catch (e) {
@@ -22,8 +22,8 @@ type CounterDocumentData = { [field: string]: string };
  * @param catCol - default 'categories'
  */
 export async function catDocCounter(
-  change: functions.Change<DocumentSnapshot<CounterDocumentData>>,
-  context: functions.EventContext,
+  change: Change<DocumentSnapshot<CounterDocumentData>>,
+  context: EventContext,
   counter = '',
   pathField = 'catPath',
   arrayField = 'catArray',
@@ -81,8 +81,8 @@ export async function catDocCounter(
  * @param pathField - default catPath
  */
 export async function subCatCounter(
-  change: functions.Change<DocumentSnapshot<CounterDocumentData>>,
-  context: functions.EventContext,
+  change: Change<DocumentSnapshot<CounterDocumentData>>,
+  context: EventContext,
   counter = '',
   parentField = 'parent',
   pathField = 'catPath',

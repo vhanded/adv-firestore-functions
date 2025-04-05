@@ -1,9 +1,9 @@
-import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
 import { arrayValueChange, deleteDoc, writeDoc, triggerFunction } from './tools';
 import { bulkUpdate, bulkDelete } from './bulk';
 import { CollectionReference, DocumentSnapshot, FieldValue, Timestamp } from 'firebase-admin/firestore';
 import { DocumentRecord, isTimestamp } from './types';
+import { Change, EventContext } from 'firebase-functions/lib/v1/cloud-functions';
 
 try {
   admin.initializeApp();
@@ -20,7 +20,7 @@ const db = admin.firestore();
  * @param isMap - see if field dot notation equals map, default true
  */
 export async function updateJoinData<T extends DocumentRecord<string, unknown>>(
-  change: functions.Change<DocumentSnapshot<T>>,
+  change: Change<DocumentSnapshot<T>>,
   queryRef: FirebaseFirestore.Query<T>,
   fields: (keyof T)[],
   field: keyof T,
@@ -85,7 +85,7 @@ export async function updateJoinData<T extends DocumentRecord<string, unknown>>(
  * @param alwaysCreate - create even if not necessary
  */
 export async function createJoinData<T extends DocumentRecord<string, unknown>>(
-  change: functions.Change<DocumentSnapshot<T>>,
+  change: Change<DocumentSnapshot<T>>,
   targetRef: FirebaseFirestore.DocumentReference<T>,
   fields: (keyof T)[],
   field: keyof T = '',
@@ -108,7 +108,7 @@ export async function createJoinData<T extends DocumentRecord<string, unknown>>(
  * @param alwaysCreate - create even if not necessary
  */
 export async function getJoinData<T extends DocumentRecord<string, unknown>>(
-  change: functions.Change<DocumentSnapshot<T>>,
+  change: Change<DocumentSnapshot<T>>,
   targetRef: FirebaseFirestore.DocumentReference<T>,
   fields: (keyof T)[],
   field: keyof T = '',
@@ -147,8 +147,8 @@ export async function getJoinData<T extends DocumentRecord<string, unknown>>(
  * @param alwaysAggregate - skip redundant aggregation, useful if not date sort
  */
 export async function aggregateData<T extends DocumentRecord<string, unknown>>(
-  change: functions.Change<DocumentSnapshot<T>>,
-  context: functions.EventContext,
+  change: Change<DocumentSnapshot<T>>,
+  context: EventContext,
   targetRef: FirebaseFirestore.DocumentReference<T>,
   queryRef: FirebaseFirestore.Query<T>,
   fieldExceptions: (keyof T)[] = [],
@@ -258,8 +258,8 @@ export async function arrayIndex<
     createdAt?: FieldValue | Timestamp;
   } & DocumentRecord<string, unknown>,
 >(
-  change: functions.Change<DocumentSnapshot<T>>,
-  context: functions.EventContext,
+  change: Change<DocumentSnapshot<T>>,
+  context: EventContext,
   _opts: ArrayIndexOptions<T> = {},
 ): Promise<void> {
   const path = context.resource.name.split('/').splice(5);
