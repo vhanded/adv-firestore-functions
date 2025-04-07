@@ -1,15 +1,15 @@
-import * as admin from 'firebase-admin';
 import { getBefore, createDoc, updateDoc, deleteDoc, getFriendlyURL } from './tools';
-import { DocumentSnapshot } from 'firebase-admin/firestore';
+import { DocumentSnapshot, getFirestore } from 'firebase-admin/firestore';
 import { DocumentRecord } from './types';
 import { Change } from 'firebase-functions/core';
 import { EventContext } from 'firebase-functions/lib/v1/cloud-functions';
+import { initializeApp } from 'firebase-admin/app';
 try {
-  admin.initializeApp();
+  initializeApp();
 } catch (e) {
   /* empty */
 }
-const db = admin.firestore();
+const db = getFirestore();
 /**
  * Creates a unique field index
  * @param colPath - collection / field name

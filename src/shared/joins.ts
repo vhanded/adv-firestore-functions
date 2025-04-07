@@ -1,16 +1,16 @@
-import * as admin from 'firebase-admin';
 import { arrayValueChange, deleteDoc, writeDoc, triggerFunction } from './tools';
 import { bulkUpdate, bulkDelete } from './bulk';
-import { CollectionReference, DocumentSnapshot, FieldValue, Timestamp } from 'firebase-admin/firestore';
+import { CollectionReference, DocumentReference, DocumentSnapshot, FieldValue, getFirestore, Query, QueryDocumentSnapshot, Timestamp } from 'firebase-admin/firestore';
 import { DocumentRecord, isTimestamp } from './types';
 import { Change, EventContext } from 'firebase-functions/lib/v1/cloud-functions';
+import { initializeApp } from 'firebase-admin/app';
 
 try {
-  admin.initializeApp();
+  initializeApp();
 } catch (e) {
   /* empty */
 }
-const db = admin.firestore();
+const db = getFirestore();
 /**
  * Update foreign key join data
  * @param change - change event
@@ -21,7 +21,7 @@ const db = admin.firestore();
  */
 export async function updateJoinData<T extends DocumentRecord<string, unknown>>(
   change: Change<DocumentSnapshot<T>>,
-  queryRef: FirebaseFirestore.Query<T>,
+  queryRef: Query<T>,
   fields: (keyof T)[],
   field: keyof T,
   del = false,
@@ -33,8 +33,8 @@ export async function updateJoinData<T extends DocumentRecord<string, unknown>>(
   }
   // get array of doc references
   const querySnap = await queryRef.get();
-  const docRefs: FirebaseFirestore.DocumentReference<T>[] = [];
-  querySnap.forEach((q: FirebaseFirestore.QueryDocumentSnapshot<T>) => {
+  const docRefs: DocumentReference<T>[] = [];
+  querySnap.forEach((q: QueryDocumentSnapshot<T>) => {
     docRefs.push(q.ref);
   });
 
@@ -86,7 +86,7 @@ export async function updateJoinData<T extends DocumentRecord<string, unknown>>(
  */
 export async function createJoinData<T extends DocumentRecord<string, unknown>>(
   change: Change<DocumentSnapshot<T>>,
-  targetRef: FirebaseFirestore.DocumentReference<T>,
+  targetRef: DocumentReference<T>,
   fields: (keyof T)[],
   field: keyof T = '',
   data = {} as T,
@@ -109,7 +109,7 @@ export async function createJoinData<T extends DocumentRecord<string, unknown>>(
  */
 export async function getJoinData<T extends DocumentRecord<string, unknown>>(
   change: Change<DocumentSnapshot<T>>,
-  targetRef: FirebaseFirestore.DocumentReference<T>,
+  targetRef: DocumentReference<T>,
   fields: (keyof T)[],
   field: keyof T = '',
   data = {} as T,
@@ -149,8 +149,8 @@ export async function getJoinData<T extends DocumentRecord<string, unknown>>(
 export async function aggregateData<T extends DocumentRecord<string, unknown>>(
   change: Change<DocumentSnapshot<T>>,
   context: EventContext,
-  targetRef: FirebaseFirestore.DocumentReference<T>,
-  queryRef: FirebaseFirestore.Query<T>,
+  targetRef: DocumentReference<T>,
+  queryRef: Query<T>,
   fieldExceptions: (keyof T)[] = [],
   aggregateField: keyof T = '',
   n = 3,
@@ -301,15 +301,15 @@ export async function arrayIndex<
     // array or map type
     const deleteVal =
       opts.type === 'array'
-        ? admin.firestore.FieldValue.arrayRemove(fieldValue)
-        : { [fieldValue]: admin.firestore.FieldValue.delete() };
+        ? FieldValue.arrayRemove(fieldValue)
+        : { [fieldValue]: FieldValue.delete() };
 
     // don't delete if no doc to delete
     if (!latestSnap.empty) {
       console.log(`Removing ${fieldValue} index from ${opts.indexFieldName as string} on ${opts.indexColName}`);
       await indexColRef.doc(latestSnap.docs[0].id).set(
         {
-          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          updatedAt: FieldValue.serverTimestamp(),
           [opts.indexFieldName]: deleteVal,
         } as Partial<T>,
         { merge: true },

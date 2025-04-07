@@ -1,6 +1,5 @@
 // import * as functions from 'firebase-functions';
-import * as admin from 'firebase-admin';
-import { CollectionReference, DocumentSnapshot, QuerySnapshot } from 'firebase-admin/firestore';
+import { CollectionReference, DocumentReference, DocumentSnapshot, FieldPath, getFirestore, QuerySnapshot } from 'firebase-admin/firestore';
 import { eventExists } from './events';
 import { bulkDelete, ArrayChunk } from './bulk';
 import {
@@ -17,6 +16,7 @@ import {
 import { DocumentRecord } from './types';
 import { htmlToText } from 'html-to-text';
 import { Change, EventContext } from 'firebase-functions/lib/v1/cloud-functions';
+import { initializeApp } from 'firebase-admin/app';
 
 // DEFAULTS
 const DELIM = '__';
@@ -34,7 +34,7 @@ function extractCollectionNameFromPath({ resource: { name } }: EventContext, pat
   console.log('Extracting collection name from path: ', name);
   // return name.slice(name.indexOf(path) + path.length).split('/')[1]; // path starts with / so [0] is empty string
   const pathParts = name.split('/documents/')[1].split('/');
-  return pathParts[0];
+  return pathParts[pathParts.length - 2];
 }
 
 // TYPES
@@ -85,11 +85,11 @@ type TrigramIndexOptions = {
 };
 
 try {
-  admin.initializeApp();
+  initializeApp();
 } catch (e) {
   /* empty */
 }
-const db = admin.firestore();
+const db = getFirestore();
 
 /**
  * Full Text Search
@@ -140,10 +140,10 @@ export async function fullTextIndex(
       const foreignKeyValue = getValue(change, foreignKey);
 
       // remove old indexes
-      const delDocs: FirebaseFirestore.DocumentReference[] = [];
+      const delDocs: DocumentReference[] = [];
 
       // see if search for id field
-      const sForeignKey = foreignKey === 'id' ? admin.firestore.FieldPath.documentId() : foreignKey;
+      const sForeignKey = foreignKey === 'id' ? FieldPath.documentId() : foreignKey;
 
       const searchSnap = await collectionToIndexDocument
         .collection(fieldToIndex)
@@ -270,7 +270,7 @@ export async function relevantSearch({
     `${rootCollectionPath ?? ''}/${searchCollectionName}/${collectionToSearch}`,
   );
   const mergedCollection = collectionToSearchDocument.collection('_merged');
-
+  console.log('Searching in ', collectionToSearchDocument.path, ' for ', exp);
   if (fieldsToSearch.includes('_merged')) {
     let query = mergedCollection.orderBy(`${termField}.${exp}`, 'desc');
     if (limit) {
@@ -303,14 +303,13 @@ export async function relevantSearch({
   const docsSnaps = await Promise.all(s);
   const ids = {} as DocumentRecord<string, number>;
   let i = 0;
-
   // return merged results
   return docsSnaps
     .map((q) => {
       // get relevant info from docs
       return q.docs.map((doc) => {
         const { _term } = doc.data() as { _term?: DocumentRecord<string, number> };
-        const id = doc.id;
+        const id = doc.id.replace(/@/g, "/");
         const relevance = _term?.[exp] as number;
         return { id, relevance } as SearchResult;
       });
@@ -598,9 +597,11 @@ export async function relevantIndex(
     return null;
   }
 
-  const {
+  let {
     params: { [contextParamsKey]: docId },
+    resource: { name },
   } = context;
+
   // get collection
   const collectionToIndex = extractCollectionNameFromPath(context, rootCollectionPath);
 
@@ -611,6 +612,12 @@ export async function relevantIndex(
   if (typeof docId !== 'string' || docId.length < 1) {
     throw new Error('Missing doc Id');  
   }
+  
+  const pathParts = name.split('/documents/')[1].split('/');
+  if (pathParts.length > 2){ // nested collection
+    docId = pathParts.join('@');
+  }
+  
 
   const collectionToIndexDocument = db.doc(`${rootCollectionPath}/${searchCollectionName}/${collectionToIndex}`);
   const searchRef = collectionToIndexDocument.collection(mergedCollectionName).doc(docId);

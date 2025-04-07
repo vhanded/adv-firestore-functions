@@ -5,12 +5,13 @@
  * You can basically ignore this file.
  */
 
-import * as admin from 'firebase-admin';
+import { credential, initializeApp } from "firebase-admin";
+import { FieldValue, getFirestore } from "firebase-admin/firestore";
 
 const serviceAccount = require('./serviceAccountKey.json');
 
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
+initializeApp({
+  credential: credential.cert(serviceAccount),
 });
 
 interface BTreeNode {
@@ -34,7 +35,7 @@ class BTree {
     query: FirebaseFirestore.Query<FirebaseFirestore.DocumentData>,
     order = 3,
   ) {
-    this.db = admin.firestore();
+    this.db = getFirestore();
     this.indexCol = this.db.collection(indexCol);
     this.searchCol = this.db.collection(searchCol);
     this.order = order;
@@ -65,7 +66,7 @@ class BTree {
       // see if room in node
       if (values.length < this.order) {
         // add values to search node
-        const increment = admin.firestore.FieldValue.increment(1);
+        const increment = FieldValue.increment(1);
         searchNode.ref.set({ values, size: increment }, { merge: true });
       } else {
         this.splitNode(values, searchNode);
@@ -132,7 +133,7 @@ class BTree {
 main();
 
 async function main() {
-  const q = admin.firestore().collection('posts').orderBy('title', 'asc');
+  const q = getFirestore().collection('posts').orderBy('title', 'asc');
 
   const t = new BTree('posts', '_nodes', q);
 

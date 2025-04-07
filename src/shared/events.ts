@@ -1,13 +1,14 @@
-import * as admin from 'firebase-admin';
+import { initializeApp } from 'firebase-admin/app';
 import { ArrayChunk } from './bulk';
 import { EventContext } from 'firebase-functions/lib/v1/cloud-functions';
+import { getFirestore, FieldValue, DocumentReference } from 'firebase-admin/firestore';
 
 try {
-  admin.initializeApp();
+  initializeApp();
 } catch (e) {
   /* empty */
 }
-const db = admin.firestore();
+const db = getFirestore();
 /**
  * Runs a set function once using events
  * @param context - event context
@@ -37,7 +38,7 @@ export async function eventExists(context: EventContext, eventsCol = '_events'):
   // add event and update size
   eventRef
     .set({
-      completed: admin.firestore.FieldValue.serverTimestamp(),
+      completed: FieldValue.serverTimestamp(),
     })
     .catch((e) => {
       console.log(e);
@@ -47,7 +48,7 @@ export async function eventExists(context: EventContext, eventsCol = '_events'):
   yesterday.setDate(yesterday.getDate() - 1);
 
   // delete all _event docs older than yesterday
-  const delDocs: FirebaseFirestore.DocumentReference[] = [];
+  const delDocs: DocumentReference[] = [];
   const eventFilter = db.collection(eventsCol).where('completed', '<=', yesterday);
   const eventFilterSnap = await eventFilter.get();
   eventFilterSnap.forEach((doc) => {

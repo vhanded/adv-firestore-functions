@@ -1,11 +1,12 @@
-import * as admin from 'firebase-admin';
+import { initializeApp } from 'firebase-admin/app';
 import { DocumentRecord } from './types';
+import { DocumentReference, getFirestore } from 'firebase-admin/firestore';
 try {
-  admin.initializeApp();
+  initializeApp();
 } catch (e) {
   /* empty */
 }
-const db = admin.firestore();
+const db = getFirestore();
 /**
  * Chunk array in parts
  * @param arr - array to chunk
@@ -37,7 +38,7 @@ export class ArrayChunk<T> {
  * @param data - data to update
  */
 export function bulkUpdate<T extends DocumentRecord<string, unknown>>(
-  docs: FirebaseFirestore.DocumentReference<T>[],
+  docs: DocumentReference<T>[],
   data: object,
 ) {
   // number of docs to delete
@@ -63,7 +64,7 @@ export function bulkUpdate<T extends DocumentRecord<string, unknown>>(
  * Bulk delete data
  * @param docs - doc references to delete
  */
-export function bulkDelete<T extends DocumentRecord<string, unknown>>(docs: FirebaseFirestore.DocumentReference<T>[]) {
+export function bulkDelete<T extends DocumentRecord<string, unknown>>(docs: DocumentReference<T>[]) {
   // number of docs to delete
   const numDocs = docs.length;
 

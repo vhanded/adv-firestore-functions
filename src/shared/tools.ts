@@ -1,8 +1,8 @@
-import * as admin from 'firebase-admin';
 import { Timestamp, FieldValue, DocumentData, DocumentSnapshot } from 'firebase-admin/firestore';
 import { DocumentRecord } from './types';
 import { Change } from 'firebase-functions/core';
 import { EventContext } from 'firebase-functions/lib/v1/cloud-functions';
+import { initializeApp } from 'firebase-admin/app';
 
 type GetTriggerData = {
   createdAt?: Timestamp;
@@ -15,7 +15,7 @@ type SetTriggerData = {
 };
 
 try {
-  admin.initializeApp();
+  initializeApp();
 } catch (e) {
   /* empty */
 }
@@ -115,11 +115,11 @@ export async function triggerFunction(
   if (updateDates) {
     if (createDoc(change)) {
       // createdAt
-      data.createdAt = admin.firestore.FieldValue.serverTimestamp();
+      data.createdAt = FieldValue.serverTimestamp();
     }
     if (updateDoc(change)) {
       // updatedAt
-      data.updatedAt = admin.firestore.FieldValue.serverTimestamp();
+      data.updatedAt = FieldValue.serverTimestamp();
     }
   }
   if (writeDoc(change)) {
@@ -276,7 +276,7 @@ export function valueDelete<T extends DocumentData>(
  * @param change
  * @param val
  */
-export function valueChange<T extends admin.firestore.DocumentData>(
+export function valueChange<T extends DocumentData>(
   change: Change<DocumentSnapshot<T>>,
   val: keyof T,
 ): boolean {
@@ -300,7 +300,7 @@ export function getCollection(context: EventContext) {
  * @param change - change event
  * @param arr - array of values to check
  */
-export function arrayValueChange<T extends admin.firestore.DocumentData>(
+export function arrayValueChange<T extends DocumentData>(
   change: Change<DocumentSnapshot<T>>,
   arr: (keyof T)[],
 ): boolean {

@@ -1,13 +1,13 @@
-import * as admin from 'firebase-admin';
+import { initializeApp } from 'firebase-admin/app';
 import { queryCounter } from './counters';
-import { DocumentSnapshot } from 'firebase-admin/firestore';
+import { DocumentSnapshot, getFirestore } from 'firebase-admin/firestore';
 import { Change, EventContext } from 'firebase-functions/lib/v1/cloud-functions';
 try {
-  admin.initializeApp();
+  initializeApp();
 } catch (e) {
   /* empty */
 }
-const db = admin.firestore();
+const db = getFirestore();
 
 type CounterDocumentData = { [field: string]: string };
 

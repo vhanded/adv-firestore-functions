@@ -1,17 +1,17 @@
-import * as admin from 'firebase-admin';
-import { DocumentSnapshot } from 'firebase-admin/firestore';
+import { DocumentSnapshot, FieldPath, getFirestore, Transaction, WriteResult } from 'firebase-admin/firestore';
 import { findSingleValues, updateDoc, getValue, getBefore, getAfter, getCollection } from './tools';
 import { DocumentRecord } from './types';
 import { aggregateData } from './joins';
 import { queryCounter } from './counters';
 import { Change, EventContext } from 'firebase-functions/lib/v1/cloud-functions';
+import { initializeApp } from 'firebase-admin/app';
 
 try {
-  admin.initializeApp();
+  initializeApp();
 } catch (e) {
   /* empty */
 }
-const db = admin.firestore();
+const db = getFirestore();
 /**
  * Update a tag collection automatically
  * @param change - functions
@@ -43,7 +43,7 @@ export async function tagIndex(
     tags = findSingleValues(getBefore(change, field) ?? [], after);
   }
 
-  const queries: Promise<void | FirebaseFirestore.WriteResult | FirebaseFirestore.Transaction | null>[] = [];
+  const queries: Promise<void | WriteResult | Transaction | null>[] = [];
 
   // go through each changed tag
   for (const tag of tags) {
@@ -79,7 +79,7 @@ export async function tagIndex(
 
     const tagRef = db.collection(tagCol).doc(allTagsName);
     // get all tags except aggregation tag
-    const tagQueryRef = db.collection(tagCol).where(admin.firestore.FieldPath.documentId(), '!=', allTagsName);
+    const tagQueryRef = db.collection(tagCol).where(FieldPath.documentId(), '!=', allTagsName);
     await aggregateData(change, context, tagRef, tagQueryRef, undefined, aggregateField, maxNumTags, undefined, true);
   }
   return null;

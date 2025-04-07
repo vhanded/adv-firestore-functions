@@ -1,16 +1,16 @@
-import * as admin from 'firebase-admin';
 import { DocumentRecord } from './types';
-import { DocumentSnapshot } from 'firebase-admin/firestore';
+import { DocumentReference, DocumentSnapshot, FieldPath, FieldValue, getFirestore, Query, WhereFilterOp } from 'firebase-admin/firestore';
 import { eventExists } from './events';
 import { getAfter, getBefore, valueChange } from './tools';
 import { Change } from 'firebase-functions/core';
 import { EventContext } from 'firebase-functions/lib/v1/cloud-functions';
+import { initializeApp } from 'firebase-admin/app';
 try {
-  admin.initializeApp();
+  initializeApp();
 } catch (e) {
   /* empty */
 }
-const db = admin.firestore();
+const db = getFirestore();
 
 /**
  * Runs the counter function
@@ -56,7 +56,7 @@ export async function colCounter(
   if (countSnap.exists) {
     // createDoc or deleteDoc
     const n = createDoc ? 1 : -1;
-    const i = admin.firestore.FieldValue.increment(n);
+    const i = FieldValue.increment(n);
     return countRef.update(countRef, { count: i });
 
     // otherwise count all docs in the collection and add size
@@ -87,8 +87,8 @@ export async function colCounter(
 export async function queryCounter<T extends DocumentRecord<string, unknown>>(
   change: Change<DocumentSnapshot<T>>,
   context: EventContext,
-  queryRef: FirebaseFirestore.Query<T>,
-  countRef: FirebaseFirestore.DocumentReference<T>,
+  queryRef: Query<T>,
+  countRef: DocumentReference<T>,
   countName = '',
   del = 0,
   n = 0,
@@ -120,7 +120,7 @@ export async function queryCounter<T extends DocumentRecord<string, unknown>>(
   if (countSnap.get(countName)) {
     // createDoc or deleteDoc
     const _n = n !== 0 ? n : createDoc ? 1 : -1;
-    const i = admin.firestore.FieldValue.increment(_n);
+    const i = FieldValue.increment(_n);
 
     // delete counter document if necessary
     if (countSnap.get(countName) === 1 && n === -1 && del === 1) {
@@ -147,7 +147,7 @@ export async function queryCounter<T extends DocumentRecord<string, unknown>>(
 
 function evalBooleanExpression(
   firstOperand: string,
-  operator: Omit<FirebaseFirestore.WhereFilterOp, 'array-contains' | 'in' | 'not-in' | 'array-contains-any'>,
+  operator: Omit<WhereFilterOp, 'array-contains' | 'in' | 'not-in' | 'array-contains-any'>,
   secondOperand: string,
 ) {
   switch (operator) {
@@ -182,8 +182,8 @@ function evalBooleanExpression(
 export async function conditionCounter(
   change: Change<DocumentSnapshot<DocumentRecord<string, string>>>,
   context: EventContext,
-  field: string | FirebaseFirestore.FieldPath,
-  operator: Omit<FirebaseFirestore.WhereFilterOp, 'array-contains' | 'in' | 'not-in' | 'array-contains-any'>,
+  field: string | FieldPath,
+  operator: Omit<WhereFilterOp, 'array-contains' | 'in' | 'not-in' | 'array-contains-any'>,
   value: string,
   countName = '',
   countersCol = '_counters',
@@ -226,7 +226,7 @@ export async function conditionCounter(
   if (countSnap.get(_countName)) {
     // new true expression or new false expression
     const _n = changeToTrue ? 1 : -1;
-    const i = admin.firestore.FieldValue.increment(_n);
+    const i = FieldValue.increment(_n);
 
     // delete counter document if necessary
     if (countSnap.get(_countName) === 1 && _n === -1 && del === true) {
@@ -241,7 +241,7 @@ export async function conditionCounter(
     return db
       .runTransaction(async (t) => {
         // update size
-        const queryRef = db.collection(collectionId).where(field, operator as FirebaseFirestore.WhereFilterOp, value);
+        const queryRef = db.collection(collectionId).where(field, operator as WhereFilterOp, value);
         const colSnap = await t.get(queryRef);
         return t.set(countRef, { [_countName]: colSnap.size }, { merge: true });
       })
