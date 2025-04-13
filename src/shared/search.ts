@@ -472,16 +472,38 @@ export async function initRelevantIndex(
     mergedCollectionName = _MERGED,
     termField = _TERM,
     filterFunc,
-  }: RelevantIndexOptions,
+    customKeywords = [], // New option for custom keywords
+  }: RelevantIndexOptions & { customKeywords?: string[] }, // Updated type
 ) {
   // Document to store data about the collection we want to index for searching
-  const collectionToIndexDocument = db.doc(`${rootCollectionPath}/${searchCollectionName}/${collectionToIndex}`);
+  const collectionPathParts = collectionToIndex.split('/');
+  console.log(collectionPathParts);
+  const colName = collectionPathParts[collectionPathParts.length - 1];
+  const collectionToIndexDocument = db.doc(`${rootCollectionPath}/${searchCollectionName}/${colName}`);
 
   // create or update
   const data = {} as DocumentRecord<string, string | DocumentRecord<string, number>>;
   let m = {} as DocumentRecord<string, number>;
 
-  const docData = (await db.doc(`${rootCollectionPath}/${collectionToIndex}/${docId}`).get()).data();
+  const doc = db.doc(`${rootCollectionPath}/${collectionToIndex}/${docId}`);
+  const docData = (await doc.get()).data();
+
+  // Add custom keywords to the index
+  for (const keyword of customKeywords) {
+    if (keyword) {
+      let v = '';
+      for (let i = 0; i < keyword.length; i++) {
+        v = keyword.slice(0, i + 1);
+        m[v] = m[v] ?? 0 + 1; // Increment relevance for custom keywords
+      }
+    }
+  }
+
+  // console.log("collectionToIndexDocument", collectionToIndexDocument.path);
+  const pathParts = doc.path.split('/');
+  if (pathParts.length > 2){ // nested collection
+    docId = pathParts.join('@');
+  }
 
   // go through each field to index
   for (const field of fieldsToIndex) {
